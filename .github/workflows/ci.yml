@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build bundles
+        run: npm run build
+
+      - name: Verify bundles are runnable
+        run: |
+          test -s dist/index.js
+          test -s dist/login.js
+          node --check dist/index.js
+          node --check dist/login.js
+          echo "index.js  $(du -h dist/index.js  | cut -f1)"
+          echo "login.js  $(du -h dist/login.js  | cut -f1)"

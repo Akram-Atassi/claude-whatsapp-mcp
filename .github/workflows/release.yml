@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build bundles
+        run: npm run build
+
+      - name: Verify bundles
+        run: |
+          node --check dist/index.js
+          node --check dist/login.js
+
+      - name: Package bundles
+        id: package
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          mkdir -p release
+          cp dist/index.js dist/login.js release/
+          cd release
+          zip -q "../claude-whatsapp-mcp-$TAG.zip" index.js login.js
+          cd ..
+          sha256sum dist/index.js dist/login.js "claude-whatsapp-mcp-$TAG.zip" \
+            | sed 's| dist/| |' > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/index.js
+            dist/login.js
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.package.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/index.js
+            dist/login.js
+            claude-whatsapp-mcp-*.zip
+            SHA256SUMS.txt
+          body: |
+            Prebuilt, dependency-free bundles for Claude Desktop. Download
+            `index.js` and `login.js` (or the zip) into a folder and point
+            `claude_desktop_config.json` at `index.js` — no `npm install`
+            needed. Setup details are in the [README](https://github.com/Akram-Atassi/claude-whatsapp-mcp#setup).
+
+            These bundles were built by GitHub Actions from this tag and carry
+            signed build provenance. Verify before running:
+
+            ```
+            gh attestation verify index.js --repo Akram-Atassi/claude-whatsapp-mcp
+            ```
