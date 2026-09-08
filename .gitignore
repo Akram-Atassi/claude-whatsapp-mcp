@@ -1,0 +1,7 @@
+node_modules/
+dist/
+data/
+_old-clone/
+README.personal.md
+*.zip
+.DS_Store

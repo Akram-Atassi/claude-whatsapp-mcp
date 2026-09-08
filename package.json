@@ -1,0 +1,39 @@
+{
+  "name": "whatsapp-mcp",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "MCP server linking a personal WhatsApp account to Claude Desktop",
+  "keywords": [
+    "mcp",
+    "whatsapp",
+    "claude",
+    "baileys",
+    "model-context-protocol"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/index.js",
+    "login": "node dist/login.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "baileys": "6.7.24",
+    "jimp": "^1.6.0",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^3.25.76",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/qrcode-terminal": "^0.12.2",
+    "typescript": "^5.9.0",
+    "esbuild": "^0.25.0",
+    "@types/qrcode": "^1.5.5"
+  }
+}
