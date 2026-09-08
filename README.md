@@ -1,5 +1,9 @@
 # WhatsApp MCP for Claude
 
+[![CI](https://github.com/Akram-Atassi/claude-whatsapp-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Akram-Atassi/claude-whatsapp-mcp/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Akram-Atassi/claude-whatsapp-mcp?sort=semver)](https://github.com/Akram-Atassi/claude-whatsapp-mcp/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 An MCP server that links your **personal WhatsApp account** to Claude Desktop, the same way WhatsApp Web does (you scan a QR code once). Claude can then read your chats, search your history, send messages and files, broadcast to a list of people, and create and run groups and communities.
 
 Everything runs locally on your computer. Messages live in `data/store.json` next to the server and are never sent anywhere except between your machine and WhatsApp.
@@ -55,18 +59,35 @@ Anywhere a tool takes a `chat` / `to` / `group`, you can pass a contact name ("A
 ## Requirements
 
 - Node.js 20 or newer
-- A one-time build (see [Building](#building)) — `dist/` is not committed
 - Claude Desktop
 - A phone with WhatsApp
 
-## Building
+## Install
+
+Two ways. Both end with a `dist/index.js` for Claude Desktop to run.
+
+### Option A — download a release (no build)
+
+Grab `index.js` and `login.js` from the [latest release](https://github.com/Akram-Atassi/claude-whatsapp-mcp/releases/latest) and drop them into a `dist/` folder wherever you want the server to live. They are dependency-free bundles; Node runs them as-is.
+
+Each release is built by GitHub Actions from the tagged source and carries signed build provenance, so you can confirm the bundle really came from this repo rather than someone's laptop:
 
 ```bash
+gh attestation verify index.js --repo Akram-Atassi/claude-whatsapp-mcp
+```
+
+`SHA256SUMS.txt` is attached to every release too.
+
+### Option B — build from source
+
+```bash
+git clone https://github.com/Akram-Atassi/claude-whatsapp-mcp.git
+cd claude-whatsapp-mcp
 npm install      # .npmrc already sets legacy-peer-deps
 npm run build    # esbuild -> dist/index.js + dist/login.js
 ```
 
-The build produces two standalone bundles with every dependency compiled in, so the server runs on nothing but Node — no `node_modules` at runtime.
+`dist/` is deliberately not committed — a minified bundle can't be audited, and this server holds your WhatsApp session keys. The build compiles every dependency in, so the server then runs on nothing but Node, with no `node_modules` at runtime.
 
 ## Setup
 
@@ -79,7 +100,7 @@ The build produces two standalone bundles with every dependency compiled in, so 
   "mcpServers": {
     "whatsapp": {
       "command": "node",
-      "args": ["C:\\path\\to\\whatsapp-mcp\\dist\\index.js"],
+      "args": ["C:\\path\\to\\claude-whatsapp-mcp\\dist\\index.js"],
       "env": { "WHATSAPP_MCP_DATA_DIR": "C:\\Users\\you\\.local\\whatsapp-mcp-data" }
     }
   }
@@ -186,7 +207,7 @@ Then **quit and reopen Claude Desktop**, or it keeps running the old bundle.
 
 If `npm run build` fails with `Could not resolve "any-base"`, `parse-bmfont-ascii`, or `Unexpected end of file` in `@protobufjs`, `node_modules` is partially corrupt. Delete the whole `node_modules` folder and `npm install` again — repairing in place doesn't work.
 
-The previous bundle is kept in `dist/_superseded/` before each deploy, so a bad build can be rolled back by copying it over `dist/index.js`.
+If a rebuild misbehaves, keep a copy of the working `dist/index.js` before overwriting it — or just re-download the last good bundle from [Releases](https://github.com/Akram-Atassi/claude-whatsapp-mcp/releases).
 
 ## Troubleshooting
 
@@ -219,7 +240,7 @@ More than one is expected and fine; only the lock holder connects. Check `connec
 ```json
 "whatsapp": {
   "command": "node",
-  "args": ["C:\\path\\to\\whatsapp-mcp\\dist\\index.js"],
+  "args": ["C:\\path\\to\\claude-whatsapp-mcp\\dist\\index.js"],
   "env": { "WHATSAPP_MCP_DATA_DIR": "D:\\whatsapp-data" }
 }
 ```
@@ -245,6 +266,9 @@ src/
   config.ts    data directory paths
   lock.ts      single-instance lock and the local handoff between copies
 build.mjs      esbuild bundling into standalone dist/ files
+.github/workflows/
+  ci.yml       typecheck + build on every push and PR
+  release.yml  builds, attests and publishes bundles on a v* tag
 dist/          build output — dependency-free bundles (what Claude Desktop runs)
 
 <data dir>/    WHATSAPP_MCP_DATA_DIR, outside the project folder
@@ -252,6 +276,17 @@ dist/          build output — dependency-free bundles (what Claude Desktop run
   store.json   chats, contacts, messages
   media/       downloaded attachments
 ```
+
+## Releasing
+
+CI typechecks and builds on every push to `main`. To cut a release, tag a commit on `main`:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+`release.yml` then builds the bundles, generates provenance attestations, and publishes a GitHub Release with `index.js`, `login.js`, a zip and `SHA256SUMS.txt` attached. Release notes are generated from the commits since the previous tag.
 
 ## License
 

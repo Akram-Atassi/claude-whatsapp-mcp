@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-mcp",
+  "name": "claude-whatsapp-mcp",
   "version": "1.0.0",
   "license": "MIT",
   "description": "MCP server linking a personal WhatsApp account to Claude Desktop",
@@ -10,6 +10,14 @@
     "baileys",
     "model-context-protocol"
   ],
+  "homepage": "https://github.com/Akram-Atassi/claude-whatsapp-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Akram-Atassi/claude-whatsapp-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Akram-Atassi/claude-whatsapp-mcp/issues"
+  },
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
