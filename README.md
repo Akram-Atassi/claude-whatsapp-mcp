@@ -292,4 +292,4 @@ git push origin v1.1.0
 
 MIT. Not affiliated with or endorsed by WhatsApp or Meta.
 
-[![M8ven Score](https://m8ven.ai/badge/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa?v=dc1cdfc6a92e14a90e6c396e95e757db)](https://m8ven.ai/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa)
+[![M8ven Score](https://m8ven.ai/badge/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa?v=bcc5c675e81fb6b254916c161c96068a)](https://m8ven.ai/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa)
