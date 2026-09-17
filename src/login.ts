@@ -6,7 +6,7 @@
  * Close this before starting Claude Desktop — only one process can hold the
  * WhatsApp session at a time.
  */
-import qrcode from "qrcode-terminal";
+import QRCode from "qrcode";
 import { AUTH_DIR, DATA_DIR } from "./config.js";
 import { store } from "./store.js";
 import { whatsapp } from "./whatsapp.js";
@@ -42,7 +42,7 @@ async function main() {
     if (whatsapp.lastQr && whatsapp.lastQr !== shownQr) {
       shownQr = whatsapp.lastQr;
       line("\nScan this with WhatsApp > Settings > Linked devices > Link a device:\n");
-      qrcode.generate(shownQr, { small: true });
+      line(await QRCode.toString(shownQr, { type: "terminal", small: true }));
     }
 
     if (whatsapp.state === "connected") {

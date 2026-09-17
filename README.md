@@ -192,6 +192,7 @@ Claude Desktop  ──stdio (MCP)──►  dist/index.js  ──WebSocket──
 - Every send waits on `whatsapp.ensureReady()`, which gives a mid-reconnect socket up to 15 seconds to come back and otherwise fails with a readable reason. Without it a dropped connection made sends hang until the MCP client gave up.
 - **Claude Desktop starts this server twice** — two child processes of the same `claude.exe`, a couple of seconds apart, from a single config entry. Two Baileys clients on one credential set make WhatsApp drop the link with `Stream Errored (conflict)`, costing a QR re-scan and a full history re-sync. So the instances elect one owner: whichever wins the lock at `connection.lock` in the data dir opens the WhatsApp socket and listens on a loopback port; the others register the same tools but forward every call there. Both surfaces keep working, one Baileys client exists. The lock carries a heartbeat, so if the owner dies another instance takes over within about ten seconds.
 - Nothing is written to stdout except MCP JSON-RPC; all logging goes to stderr, so the protocol stream stays clean.
+- Every tool declares the four MCP annotation hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) as explicit booleans, so hosts can tell a read from a send and warn before anything destructive like `leave_group` or removing participants.
 - Your phone does **not** need to stay online after linking (multi-device), but it must reconnect every 14 days or WhatsApp unlinks the device.
 
 ## Rebuilding
@@ -200,6 +201,7 @@ After changing anything under `src/`:
 
 ```bash
 npm run typecheck
+npm test         # exercises all 22 tools over an in-memory MCP client, no phone needed
 npm run build
 ```
 
@@ -257,7 +259,8 @@ More than one is expected and fine; only the lock holder connects. Check `connec
 
 ```
 src/
-  index.ts     MCP server and the 22 tool definitions
+  index.ts     stdio bootstrap and the single-instance routing between copies
+  tools.ts     the 22 tool definitions, each with all four MCP annotation hints
   actions.ts   broadcast jobs, group management, community linking
   whatsapp.ts  Baileys connection, event ingestion, send/download, readiness
   store.ts     on-disk JSON store for chats, contacts, messages
@@ -265,9 +268,11 @@ src/
   login.ts     terminal QR login helper
   config.ts    data directory paths
   lock.ts      single-instance lock and the local handoff between copies
+test/
+  tools.test.ts  node:test suite that lists and calls every tool through the MCP SDK
 build.mjs      esbuild bundling into standalone dist/ files
 .github/workflows/
-  ci.yml       typecheck + build on every push and PR
+  ci.yml       typecheck + test + build on every push and PR
   release.yml  builds, attests and publishes bundles on a v* tag
 dist/          build output — dependency-free bundles (what Claude Desktop runs)
 
@@ -279,7 +284,7 @@ dist/          build output — dependency-free bundles (what Claude Desktop run
 
 ## Releasing
 
-CI typechecks and builds on every push to `main`. To cut a release, tag a commit on `main`:
+CI typechecks, tests and builds on every push to `main`. To cut a release, tag a commit on `main`:
 
 ```bash
 git tag v1.1.0

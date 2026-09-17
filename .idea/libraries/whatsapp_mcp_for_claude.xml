@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="whatsapp-mcp-for-claude">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/whatsapp-mcp-for-claude.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
