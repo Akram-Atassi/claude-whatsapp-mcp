@@ -3,6 +3,8 @@
 [![CI](https://github.com/Akram-Atassi/claude-whatsapp-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Akram-Atassi/claude-whatsapp-mcp/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Akram-Atassi/claude-whatsapp-mcp?sort=semver)](https://github.com/Akram-Atassi/claude-whatsapp-mcp/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![M8ven Score](https://m8ven.ai/badge/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa?v=bcc5c675e81fb6b254916c161c96068a)](https://m8ven.ai/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa)
+
 
 An MCP server that links your **personal WhatsApp account** to Claude Desktop, the same way WhatsApp Web does (you scan a QR code once). Claude can then read your chats, search your history, send messages and files, broadcast to a list of people, and create and run groups and communities.
 
@@ -296,5 +298,3 @@ git push origin v1.1.0
 ## License
 
 MIT. Not affiliated with or endorsed by WhatsApp or Meta.
-
-[![M8ven Score](https://m8ven.ai/badge/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa?v=bcc5c675e81fb6b254916c161c96068a)](https://m8ven.ai/mcp/akram-atassi-claude-whatsapp-mcp-1kqtwa)
