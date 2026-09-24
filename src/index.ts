@@ -32,8 +32,23 @@ const rawRegisterTool = (server as any).registerTool.bind(server);
 // the routing wrapper above.
 registerTools(server);
 
-/** Claims the WhatsApp connection if it is free, and starts it if we win. */
-async function tryBecomeLeader(): Promise<boolean> {
+/**
+ * Claims the WhatsApp connection if it is free, and starts it if we win.
+ * Concurrent callers (startup plus an early tool call) share one attempt;
+ * otherwise both could win the same-pid lock and open two sockets.
+ */
+let leaderAttempt: Promise<boolean> | null = null;
+function tryBecomeLeader(): Promise<boolean> {
+  if (role === "leader") return Promise.resolve(true);
+  if (!leaderAttempt) {
+    leaderAttempt = claimLeadership().finally(() => {
+      leaderAttempt = null;
+    });
+  }
+  return leaderAttempt;
+}
+
+async function claimLeadership(): Promise<boolean> {
   if (role === "leader") return true;
   if (currentLeader()) return false;
 

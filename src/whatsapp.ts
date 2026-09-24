@@ -17,6 +17,7 @@ import makeWASocket, {
 } from "baileys";
 import { AUTH_DIR, MEDIA_DIR, ensureDirs } from "./config.js";
 import { store, type StoredMessage } from "./store.js";
+import { writeLog } from "./logfile.js";
 
 /**
  * Baileys expects a pino-shaped logger. Anything written to stdout would
@@ -38,8 +39,11 @@ export const silentLogger: any = {
 };
 
 export function log(msg: string): void {
-  process.stderr.write(`[whatsapp] ${msg}\n`);
+  writeLog("whatsapp", msg);
 }
+
+/** How long Baileys may hold events in its buffer before we force a flush. */
+const BUFFER_STUCK_MS = 30_000;
 
 export type ConnState =
   | "starting"
@@ -59,6 +63,9 @@ class WhatsAppClient {
   private reconnectAttempts = 0;
   /** Resolves the first time the socket reaches "connected". */
   private readyResolvers: Array<() => void> = [];
+  private bufferWatch: NodeJS.Timeout | null = null;
+  /** Live-message counters, reported in whatsapp_status for diagnostics. */
+  stats = { upserts: 0, undecryptable: 0, forcedFlushes: 0, lastUpsertAt: 0, connectedAt: 0 };
 
   async start(): Promise<void> {
     if (this.starting) return;
@@ -102,7 +109,17 @@ class WhatsAppClient {
       },
     });
 
+    // A previous socket's listeners must not keep writing into the store.
+    const previous = this.sock;
+    if (previous && previous !== sock) {
+      try {
+        previous.ev.removeAllListeners(undefined as any);
+      } catch {
+        /* ignore */
+      }
+    }
     this.sock = sock;
+    this.watchEventBuffer(sock);
 
     sock.ev.on("creds.update", saveCreds);
 
@@ -120,6 +137,7 @@ class WhatsAppClient {
         this.lastError = null;
         this.state = "connected";
         this.reconnectAttempts = 0;
+        this.stats.connectedAt = Date.now();
         const me = sock.user;
         if (me?.id) store.setMe(jidNormalizedUser(me.id), me.name ?? undefined);
         log(`connected as ${me?.id ?? "unknown"}`);
@@ -128,6 +146,7 @@ class WhatsAppClient {
       }
 
       if (connection === "close") {
+        if (this.sock !== sock) return; // a replaced socket closing late
         const status = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
         this.lastError = lastDisconnect?.error?.message ?? null;
 
@@ -159,7 +178,15 @@ class WhatsAppClient {
     sock.ev.on("contacts.update", (cs) => cs.forEach((c) => this.ingestContact(c as any)));
 
     sock.ev.on("messages.upsert", ({ messages, type }) => {
-      for (const msg of messages) this.ingestMessage(msg, type === "notify");
+      this.stats.upserts += messages.length;
+      this.stats.lastUpsertAt = Date.now();
+      for (const msg of messages) {
+        if (!msg.message && msg.messageStubType === 2 /* CIPHERTEXT */) {
+          this.stats.undecryptable++;
+          log(`could not decrypt message ${msg.key?.id} in ${msg.key?.remoteJid} (${(msg.messageStubParameters ?? []).join(", ")})`);
+        }
+        this.ingestMessage(msg, type === "notify");
+      }
     });
 
     sock.ev.on("groups.upsert", (groups) => {
@@ -172,6 +199,41 @@ class WhatsAppClient {
         if (g.id) store.upsertChat({ jid: g.id, name: g.subject ?? undefined, isGroup: true });
       }
     });
+  }
+
+  /**
+   * Baileys 6.7.24 can hold its event buffer forever: if the server never
+   * sends the <ib><offline> terminator, or tags live nodes offline="0", the
+   * only flush paths are never reached and messages.upsert stops firing while
+   * the connection still reports healthy. Nothing is lost - the events sit in
+   * the buffer - so flushing it by hand releases them.
+   */
+  private watchEventBuffer(sock: WASocket): void {
+    if (this.bufferWatch) clearInterval(this.bufferWatch);
+    let bufferingSince = 0;
+    this.bufferWatch = setInterval(() => {
+      if (this.sock !== sock) return;
+      const ev: any = sock.ev;
+      if (typeof ev.isBuffering !== "function" || !ev.isBuffering()) {
+        bufferingSince = 0;
+        return;
+      }
+      if (!bufferingSince) {
+        bufferingSince = Date.now();
+        return;
+      }
+      if (Date.now() - bufferingSince >= BUFFER_STUCK_MS) {
+        this.stats.forcedFlushes++;
+        log(`event buffer held for ${Math.round((Date.now() - bufferingSince) / 1000)}s - forcing a flush`);
+        bufferingSince = 0;
+        try {
+          ev.flush();
+        } catch (err) {
+          log(`forced flush failed: ${String(err)}`);
+        }
+      }
+    }, 5000);
+    if (typeof this.bufferWatch.unref === "function") this.bufferWatch.unref();
   }
 
   private scheduleReconnect(): void {

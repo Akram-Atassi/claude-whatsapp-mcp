@@ -109,6 +109,15 @@ export function registerTools(server: McpServer): void {
         if (whatsapp.state === "waiting_for_qr_scan") lines.push("Run get_login_qr and scan the code in WhatsApp > Settings > Linked devices.");
         if (whatsapp.state === "logged_out") lines.push("The device was unlinked. Delete data/auth and link again.");
         if (whatsapp.lastError) lines.push(`last error: ${whatsapp.lastError}`);
+        {
+          const st = whatsapp.stats;
+          const ago = (t: number) => (t ? `${Math.round((Date.now() - t) / 60000)} min ago` : "never");
+          lines.push(
+            `since connect (${ago(st.connectedAt)}): ${st.upserts} incoming message events, last ${ago(st.lastUpsertAt)}` +
+              (st.undecryptable ? `, ${st.undecryptable} undecryptable` : "") +
+              (st.forcedFlushes ? `, ${st.forcedFlushes} forced buffer flushes` : ""),
+          );
+        }
         return text(lines.join("\n"));
       }),
   );
